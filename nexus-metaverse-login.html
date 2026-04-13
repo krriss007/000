@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS - Metaverse Login Experience</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        #ui-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        .interactive {
+            pointer-events: auto;
+        }
+        
+        /* Glassmorphism Panel */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Neon Glow Effects */
+        .neon-text {
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8),
+                        0 0 20px rgba(0, 255, 255, 0.6),
+                        0 0 30px rgba(0, 255, 255, 0.4);
+        }
+        
+        .neon-border {
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5),
+                       inset 0 0 10px rgba(0, 255, 255, 0.1);
+        }
+        
+        /* Holographic Flicker Animation */
+        @keyframes hologram-flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+            52% { opacity: 1; }
+            54% { opacity: 0.9; }
+        }
+        
+        .hologram {
+            animation: hologram-flicker 3s infinite;
+        }
+        
+        /* Pulse Animation */
+        @keyframes pulse-glow {
+            0%, 100% { 
+                box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 40px rgba(0, 255, 255, 0.8);
+                transform: scale(1.02);
+            }
+        }
+        
+        .pulse-btn {
+            animation: pulse-glow 2s infinite;
+        }
+        
+        /* Voice Wave Animation */
+        @keyframes voice-wave {
+            0%, 100% { height: 10px; }
+            50% { height: 30px; }
+        }
+        
+        .voice-bar {
+            animation: voice-wave 0.5s ease-in-out infinite;
+        }
+        
+        /* Crosshair */
+        #crosshair {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        #crosshair::before,
+        #crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(0, 255, 255, 0.8);
+        }
+        
+        #crosshair::before {
+            width: 2px;
+            height: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        #crosshair::after {
+            width: 100%;
+            height: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        /* Loading Screen */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 1s ease;
+        }
+        
+        .loader {
+            width: 80px;
+            height: 80px;
+            border: 3px solid rgba(0, 255, 255, 0.3);
+            border-top-color: #00ffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Input Styles */
+        .cyber-input {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #00ffff;
+            transition: all 0.3s ease;
+        }
+        
+        .cyber-input:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 255, 255, 0.5);
+            border-radius: 4px;
+        }
+        
+        /* Notification */
+        .notification {
+            animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loader mb-6"></div>
+        <h1 class="text-4xl font-bold text-cyan-400 neon-text mb-2">NEXUS</h1>
+        <p class="text-gray-400">Initializing Metaverse Environment...</p>
+    </div>
+    
+    <!-- 3D Canvas Container -->
+    <div id="canvas-container"></div>
+    
+    <!-- UI Layer -->
+    <div id="ui-layer">
+        <!-- Crosshair -->
+        <div id="crosshair"></div>
+        
+        <!-- Start Screen Overlay -->
+        <div id="start-overlay" class="interactive absolute inset-0 flex items-center justify-center glass-panel">
+            <div class="text-center p-12">
+                <h1 class="text-6xl font-bold text-cyan-400 neon-text mb-4">NEXUS</h1>
+                <p class="text-xl text-gray-300 mb-8">Enter the Digital Realm</p>
+                <button id="start-btn" class="pulse-btn px-12 py-4 bg-cyan-500/20 border border-cyan-400 text-cyan-400 rounded-lg text-xl hover:bg-cyan-500/30 transition-all">
+                    ENTER WORLD
+                </button>
+                <div class="mt-8 text-gray-400 text-sm">
+                    <p>WASD - Move | Mouse - Look | E - Interact</p>
+                    <p>Click to enable voice commands</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- HUD -->
+        <div id="hud" class="hidden">
+            <!-- Top Bar -->
+            <div class="absolute top-0 left-0 right-0 p-4 flex justify-between items-start">
+                <div class="glass-panel rounded-lg p-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                        <span class="text-cyan-400">CONNECTED</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mt-1">ID: <span id="user-id">GUEST</span></p>
+                </div>
+                
+                <div class="glass-panel rounded-lg p-4">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                        </svg>
+                        <span id="voice-status" class="text-cyan-400">Voice Ready</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Interaction Prompt -->
+            <div id="interaction-prompt" class="absolute bottom-32 left-1/2 transform -translate-x-1/2 glass-panel rounded-lg px-6 py-3 hidden">
+                <span class="text-cyan-400">Press <span class="font-bold">E</span> to interact</span>
+            </div>
+            
+            <!-- AI Dialogue Box -->
+            <div id="ai-dialogue" class="absolute bottom-24 left-1/2 transform -translate-x-1/2 glass-panel rounded-lg p-6 max-w-2xl hidden">
+                <div class="flex items-start space-x-4">
+                    <div class="w-12 h-12 rounded-full bg-cyan-500/20 border border-cyan-400 flex items-center justify-center hologram">
+                        <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-cyan-400 font-semibold mb-2">A.I.D.A.</p>
+                        <p id="ai-message" class="text-gray-300">Welcome to NEXUS. I am your guide.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Voice Visualization -->
+            <div id="voice-visualizer" class="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-center space-x-1 hidden">
+                <div class="voice-bar w-1 bg-cyan-400 rounded" style="animation-delay: 0s;"></div>
+                <div class="voice-bar w-1 bg-cyan-400 rounded" style="animation-delay: 0.1s;"></div>
+                <div class="voice-bar w-1 bg-cyan-400 rounded" style="animation-delay: 0.2s;"></div>
+                <div class="voice-bar w-1 bg-cyan-400 rounded" style="animation-delay: 0.3s;"></div>
+                <div class="voice-bar w-1 bg-cyan-400 rounded" style="animation-delay: 0.4s;"></div>
+            </div>
+        </div>
+        
+        <!-- Login Terminal UI -->
+        <div id="login-terminal" class="interactive absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 hidden">
+            <div class="glass-panel rounded-2xl p-8 w-96 neon-border">
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold text-cyan-400 neon-text mb-2">LOGIN</h2>
+                    <p class="text-gray-400">Access the Nexus Network</p>
+                </div>
+                
+                <form id="login-form" class="space-y-6">
+                    <div>
+                        <label class="block text-cyan-400 mb-2 text-sm">EMAIL</label>
+                        <input type="email" id="email" class="cyber-input w-full px-4 py-3 rounded-lg" placeholder="user@nexus.io" required>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-cyan-400 mb-2 text-sm">PASSWORD</label>
+                        <input type="password" id="password" class="cyber-input w-full px-4 py-3 rounded-lg" placeholder="••••••••" required>
+                    </div>
+                    
+                    <button type="submit" class="pulse-btn w-full py-3 bg-cyan-500/20 border border-cyan-400 text-cyan-400 rounded-lg hover:bg-cyan-500/30 transition-all font-semibold">
+                        AUTHENTICATE
+                    </button>
+                </form>
+                
+                <div class="mt-6 text-center">
+                    <p class="text-gray-400 text-sm mb-3">Or use voice command</p>
+                    <button id="voice-login-btn" class="px-6 py-2 bg-purple-500/20 border border-purple-400 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-all text-sm">
+                        🎤 Say "Login"
+                    </button>
+                </div>
+                
+                <button id="close-terminal" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Success Cinematic Overlay -->
+        <div id="success-overlay" class="hidden absolute inset-0 bg-black/80 flex items-center justify-center">
+            <div class="text-center">
+                <div class="mb-8">
+                    <svg class="w-24 h-24 text-green-400 mx-auto animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-5xl font-bold text-green-400 neon-text mb-4">ACCESS GRANTED</h2>
+                <p class="text-xl text-gray-300 mb-8">Welcome to the Nexus, <span id="welcome-user">Traveler</span></p>
+                <div class="loader mx-auto border-green-400 border-t-green-200"></div>
+            </div>
+        </div>
+        
+        <!-- Notifications Container -->
+        <div id="notifications" class="absolute top-20 right-4 space-y-2"></div>
+        
+        <!-- Multiplayer Indicators -->
+        <div id="players-list" class="absolute top-32 right-4 glass-panel rounded-lg p-4 hidden">
+            <h3 class="text-cyan-400 font-semibold mb-3 text-sm">ONLINE USERS</h3>
+            <div id="players-container" class="space-y-2"></div>
+        </div>
+    </div>
+    
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <script>
+        // ============================================
+        // GLOBAL STATE
+        // ============================================
+        const state = {
+            isPlaying: false,
+            isLoggedIn: false,
+            isTerminalOpen: false,
+            isVoiceActive: false,
+            nearTerminal: false,
+            players: []
+        };
+        
+        // ============================================
+        // THREE.JS SETUP
+        // ============================================
+        let scene, camera, renderer, controls;
+        let player, velocity, direction;
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        let prevTime = performance.now();
+        let aiAssistant, terminal, particles;
+        let raycaster;
+        
+        // Audio Context
+        let audioContext;
+        let ambientOscillator;
+        
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a1a);
+            scene.fog = new THREE.FogExp2(0x0a0a1a, 0.015);
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 1.7, 10);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            // Raycaster for interaction
+            raycaster = new THREE.Raycaster();
+            
+            // Create World
+            createWorld();
+            createPlayer();
+            createAIAssistant();
+            createTerminal();
+            createParticles();
+            createLighting();
+            createSkybox();
+            simulateMultiplayer();
+            
+            // Event Listeners
+            setupEventListeners();
+            
+            // Hide loading screen
+            setTimeout(() => {
+                document.getElementById('loading-screen').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('loading-screen').style.display = 'none';
+                }, 1000);
+            }, 2000);
+            
+            // Start animation loop
+            animate();
+        }
+        
+        // ============================================
+        // WORLD CREATION
+        // ============================================
+        function createWorld() {
+            // Ground Grid
+            const gridHelper = new THREE.GridHelper(200, 50, 0x00ffff, 0x004444);
+            scene.add(gridHelper);
+            
+            // Ground Plane with Shader
+            const groundGeometry = new THREE.PlaneGeometry(200, 200);
+            const groundMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 },
+                    color1: { value: new THREE.Color(0x0a0a1a) },
+                    color2: { value: new THREE.Color(0x001133) }
+                },
+                vertexShader: `
+                    varying vec2 vUv;
+                    void main() {
+                        vUv = uv;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float time;
+                    uniform vec3 color1;
+                    uniform vec3 color2;
+                    varying vec2 vUv;
+                    
+                    void main() {
+                        float wave = sin(vUv.x * 20.0 + time) * 0.5 + 0.5;
+                        vec3 color = mix(color1, color2, wave);
+                        gl_FragColor = vec4(color, 1.0);
+                    }
+                `,
+                side: THREE.DoubleSide
+            });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -0.1;
+            scene.add(ground);
+            
+            // Store ground material for animation
+            state.groundMaterial = groundMaterial;
+            
+            // Floating Platforms
+            createPlatform(0, 2, -15, 8, 0.5, 8);
+            createPlatform(-12, 4, -8, 6, 0.5, 6);
+            createPlatform(12, 4, -8, 6, 0.5, 6);
+            createPlatform(0, 6, -5, 5, 0.5, 5);
+            
+            // Cyber Buildings
+            createBuilding(-20, 0, -30, 8, 40, 8);
+            createBuilding(20, 0, -30, 8, 40, 8);
+            createBuilding(-15, 0, -50, 10, 60, 10);
+            createBuilding(15, 0, -50, 10, 60, 10);
+            createBuilding(0, 0, -70, 15, 80, 15);
+            
+            // Neon Rings
+            createNeonRing(0, 10, -5, 3, 0x00ffff);
+            createNeonRing(0, 15, -5, 2, 0xff00ff);
+            createNeonRing(0, 20, -5, 2.5, 0x00ff00);
+        }
+        
+        function createPlatform(x, y, z, w, h, d) {
+            const geometry = new THREE.BoxGeometry(w, h, d);
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x001133,
+                emissive: 0x0044aa,
+                emissiveIntensity: 0.5,
+                transparent: true,
+                opacity: 0.8
+            });
+            const platform = new THREE.Mesh(geometry, material);
+            platform.position.set(x, y, z);
+            platform.castShadow = true;
+            platform.receiveShadow = true;
+            scene.add(platform);
+            
+            // Glowing edges
+            const edges = new THREE.EdgesGeometry(geometry);
+            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+            line.position.copy(platform.position);
+            scene.add(line);
+        }
+        
+        function createBuilding(x, y, z, w, h, d) {
+            const geometry = new THREE.BoxGeometry(w, h, d);
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x0a0a1a,
+                emissive: 0x001133,
+                emissiveIntensity: 0.3
+            });
+            const building = new THREE.Mesh(geometry, material);
+            building.position.set(x, y + h/2, z);
+            scene.add(building);
+            
+            // Windows
+            const windowGeo = new THREE.PlaneGeometry(0.5, 1);
+            const windowMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.8 });
+            
+            for (let i = 0; i < 10; i++) {
+                for (let j = 0; j < 20; j++) {
+                    if (Math.random() > 0.5) {
+                        const window = new THREE.Mesh(windowGeo, windowMat);
+                        window.position.set(
+                            x + (Math.random() - 0.5) * w * 0.9,
+                            y + 2 + j * 2,
+                            z + d/2 + 0.1
+                        );
+                        window.rotation.y = Math.PI;
+                        scene.add(window);
+                    }
+                }
+            }
+        }
+        
+        function createNeonRing(x, y, z, radius, color) {
+            const geometry = new THREE.TorusGeometry(radius, 0.1, 16, 100);
+            const material = new THREE.MeshBasicMaterial({ color: color });
+            const ring = new THREE.Mesh(geometry, material);
+            ring.position.set(x, y, z);
+            ring.rotation.x = Math.PI / 2;
+            scene.add(ring);
+            
+            // Animate ring
+            state.rings = state.rings || [];
+            state.rings.push({ mesh: ring, speed: Math.random() * 0.02 + 0.01 });
+        }
+        
+        // ============================================
+        // PLAYER SYSTEM
+        // ============================================
+        function createPlayer() {
+            velocity = new THREE.Vector3();
+            direction = new THREE.Vector3();
+            
+            // Pointer Lock Controls (manual implementation)
+            controls = {
+                getObject: () => camera,
+                isLocked: false,
+                lock: () => {
+                    document.body.requestPointerLock();
+                    controls.isLocked = true;
+                },
+                unlock: () => {
+                    document.exitPointerLock();
+                    controls.isLocked = false;
+                }
+            };
+            
+            // Player indicator (invisible collider)
+            const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+            const material = new THREE.MeshBasicMaterial({ visible: false });
+            player = new THREE.Mesh(geometry, material);
+            player.position.copy(camera.position);
+            scene.add(player);
+        }
+        
+        // ============================================
+        // AI ASSISTANT
+        // ============================================
+        function createAIAssistant() {
+            // AI Core - Floating Orb
+            const coreGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+            const coreMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 },
+                    innerColor: { value: new THREE.Color(0x00ffff) },
+                    outerColor: { value: new THREE.Color(0x0088ff) }
+                },
+                vertexShader: `
+                    varying vec2 vUv;
+                    varying vec3 vNormal;
+                    void main() {
+                        vUv = uv;
+                        vNormal = normal;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float time;
+                    uniform vec3 innerColor;
+                    uniform vec3 outerColor;
+                    varying vec2 vUv;
+                    varying vec3 vNormal;
+                    
+                    void main() {
+                        float intensity = pow(0.7 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
+                        float pulse = sin(time * 3.0) * 0.5 + 0.5;
+                        vec3 color = mix(innerColor, outerColor, intensity + pulse * 0.3);
+                        gl_FragColor = vec4(color, 0.9);
+                    }
+                `,
+                transparent: true
+            });
+            
+            aiAssistant = new THREE.Mesh(coreGeometry, coreMaterial);
+            aiAssistant.position.set(0, 2.5, -12);
+            scene.add(aiAssistant);
+            
+            // Outer Ring
+            const ringGeometry = new THREE.TorusGeometry(1, 0.05, 16, 100);
+            const ringMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x00ffff, 
+                transparent: true, 
+                opacity: 0.6 
+            });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.rotation.x = Math.PI / 2;
+            aiAssistant.add(ring);
+            aiAssistant.ring = ring;
+            
+            // Orbiting Particles
+            const orbitParticles = [];
+            for (let i = 0; i < 8; i++) {
+                const particleGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+                const particleMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                particle.angle = (i / 8) * Math.PI * 2;
+                particle.radius = 1.5;
+                particle.speed = 0.02 + Math.random() * 0.02;
+                orbitParticles.push(particle);
+                aiAssistant.add(particle);
+            }
+            aiAssistant.orbitParticles = orbitParticles;
+            
+            state.aiAssistant = aiAssistant;
+        }
+        
+        // ============================================
+        // LOGIN TERMINAL
+        // ============================================
+        function createTerminal() {
+            // Terminal Base
+            const baseGeometry = new THREE.CylinderGeometry(2, 2.5, 0.5, 32);
+            const baseMaterial = new THREE.MeshPhongMaterial({
+                color: 0x111122,
+                emissive: 0x002244,
+                emissiveIntensity: 0.5
+            });
+            const base = new THREE.Mesh(baseGeometry, baseMaterial);
+            base.position.set(0, 0.25, -18);
+            scene.add(base);
+            
+            // Terminal Column
+            const columnGeometry = new THREE.CylinderGeometry(0.5, 0.5, 3, 16);
+            const columnMaterial = new THREE.MeshPhongMaterial({
+                color: 0x001133,
+                emissive: 0x0044aa,
+                emissiveIntensity: 0.3
+            });
+            const column = new THREE.Mesh(columnGeometry, columnMaterial);
+            column.position.set(0, 2, -18);
+            scene.add(column);
+            
+            // Holographic Display
+            const displayGeometry = new THREE.CircleGeometry(1.5, 32);
+            const displayMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 },
+                    color: { value: new THREE.Color(0x00ffff) }
+                },
+                vertexShader: `
+                    varying vec2 vUv;
+                    void main() {
+                        vUv = uv;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float time;
+                    uniform vec3 color;
+                    varying vec2 vUv;
+                    
+                    void main() {
+                        float dist = length(vUv - 0.5);
+                        float rings = sin(dist * 20.0 - time * 2.0) * 0.5 + 0.5;
+                        float alpha = 1.0 - smoothstep(0.0, 0.5, dist);
+                        vec3 finalColor = color * (rings * 0.5 + 0.5);
+                        gl_FragColor = vec4(finalColor, alpha * 0.8);
+                    }
+                `,
+                transparent: true,
+                side: THREE.DoubleSide
+            });
+            const display = new THREE.Mesh(displayGeometry, displayMaterial);
+            display.position.set(0, 3.5, -18);
+            display.rotation.x = -0.3;
+            scene.add(display);
+            
+            terminal = {
+                base: base,
+                column: column,
+                display: display,
+                displayMaterial: displayMaterial,
+                position: new THREE.Vector3(0, 0, -18)
+            };
+            
+            state.terminal = terminal;
+        }
+        
+        // ============================================
+        // PARTICLE SYSTEM
+        // ============================================
+        function createParticles() {
+            const particleCount = 1000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 100;
+                positions[i * 3 + 1] = Math.random() * 50;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 100;
+                
+                const color = new THREE.Color();
+                color.setHSL(Math.random() * 0.2 + 0.5, 1.0, 0.5);
+                colors[i * 3] = color.r;
+                colors[i * 3 + 1] = color.g;
+                colors[i * 3 + 2] = color.b;
+            }
+            
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: 0.1,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+            
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+            
+            state.particles = particles;
+        }
+        
+        // ============================================
+        // LIGHTING
+        // ============================================
+        function createLighting() {
+            // Ambient Light
+            const ambientLight = new THREE.AmbientLight(0x222244, 0.5);
+            scene.add(ambientLight);
+            
+            // Point Lights
+            const pointLight1 = new THREE.PointLight(0x00ffff, 1, 50);
+            pointLight1.position.set(10, 5, 10);
+            scene.add(pointLight1);
+            
+            const pointLight2 = new THREE.PointLight(0xff00ff, 1, 50);
+            pointLight2.position.set(-10, 5, 10);
+            scene.add(pointLight2);
+            
+            // Spotlight on Terminal
+            const spotLight = new THREE.SpotLight(0x00ffff, 2);
+            spotLight.position.set(0, 10, 0);
+            spotLight.target.position.set(0, 0, -18);
+            scene.add(spotLight);
+            scene.add(spotLight.target);
+            
+            // Hemisphere Light
+            const hemisphereLight = new THREE.HemisphereLight(0x00ffff, 0xff00ff, 0.3);
+            scene.add(hemisphereLight);
+        }
+        
+        // ============================================
+        // SKYBOX
+        // ============================================
+        function createSkybox() {
+            const skyGeometry = new THREE.SphereGeometry(500, 32, 32);
+            const skyMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 }
+                },
+                vertexShader: `
+                    varying vec3 vUv;
+                    void main() {
+                        vUv = position;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float time;
+                    varying vec3 vUv;
+                    
+                    void main() {
+                        float gradient = normalize(vUv).y * 0.5 + 0.5;
+                        vec3 color1 = vec3(0.0, 0.0, 0.1);
+                        vec3 color2 = vec3(0.1, 0.0, 0.2);
+                        vec3 color = mix(color1, color2, gradient);
+                        
+                        // Stars
+                        float stars = pow(fractal(sin(dot(vUv.xy, vec2(12.9898, 78.233))) * 43758.5453), 100.0);
+                        color += vec3(stars);
+                        
+                        gl_FragColor = vec4(color, 1.0);
+                    }
+                    
+                    float fractal(float x) {
+                        return x - floor(x);
+                    }
+                `,
+                side: THREE.BackSide
+            });
+            const skybox = new THREE.Mesh(skyGeometry, skyMaterial);
+            scene.add(skybox);
+            
+            state.skybox = skybox;
+            state.skyboxMaterial = skyMaterial;
+        }
+        
+        // ============================================
+        // MULTIPLAYER SIMULATION
+        // ============================================
+        function simulateMultiplayer() {
+            const playerNames = ['Neo', 'Trinity', 'Morpheus', 'Cipher', 'Tank', 'Dozer'];
+            const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff];
+            
+            state.players = [];
+            
+            for (let i = 0; i < 3; i++) {
+                const geometry = new THREE.CapsuleGeometry(0.3, 1.5, 4, 8);
+                const material = new THREE.MeshPhongMaterial({
+                    color: colors[i],
+                    emissive: colors[i],
+                    emissiveIntensity: 0.5,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                const playerMesh = new THREE.Mesh(geometry, material);
+                
+                // Random starting position
+                playerMesh.position.set(
+                    (Math.random() - 0.5) * 30,
+                    1,
+                    (Math.random() - 0.5) * 30 - 20
+                );
+                
+                // Name tag (sprite)
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = 256;
+                canvas.height = 64;
+                context.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                context.fillRect(0, 0, 256, 64);
+                context.fillStyle = '#00ffff';
+                context.font = 'Bold 24px Arial';
+                context.textAlign = 'center';
+                context.fillText(playerNames[i], 128, 40);
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+                const sprite = new THREE.Sprite(spriteMaterial);
+                sprite.position.y = 2.5;
+                sprite.scale.set(4, 1, 1);
+                playerMesh.add(sprite);
+                
+                scene.add(playerMesh);
+                
+                state.players.push({
+                    mesh: playerMesh,
+                    name: playerNames[i],
+                    velocity: new THREE.Vector3(
+                        (Math.random() - 0.5) * 0.05,
+                        0,
+                        (Math.random() - 0.5) * 0.05
+                    ),
+                    bounds: {
+                        x: { min: -40, max: 40 },
+                        z: { min: -80, max: 20 }
+                    }
+                });
+            }
+            
+            // Show players list
+            updatePlayersList();
+            document.getElementById('players-list').classList.remove('hidden');
+        }
+        
+        function updatePlayersList() {
+            const container = document.getElementById('players-container');
+            container.innerHTML = '';
+            
+            state.players.forEach((player, index) => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center space-x-2 text-sm';
+                div.innerHTML = `
+                    <div class="w-2 h-2 rounded-full" style="background-color: hsl(${index * 60}, 100%, 50%)"></div>
+                    <span class="text-gray-300">${player.name}</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        function updateMultiplayer() {
+            state.players.forEach(player => {
+                // Move player
+                player.mesh.position.add(player.velocity);
+                
+                // Bounce off bounds
+                if (player.mesh.position.x < player.bounds.x.min || player.mesh.position.x > player.bounds.x.max) {
+                    player.velocity.x *= -1;
+                }
+                if (player.mesh.position.z < player.bounds.z.min || player.mesh.position.z > player.bounds.z.max) {
+                    player.velocity.z *= -1;
+                }
+                
+                // Bobbing motion
+                player.mesh.position.y = 1 + Math.sin(Date.now() * 0.002 + player.mesh.id) * 0.2;
+                
+                // Rotate slightly
+                player.mesh.rotation.y += 0.01;
+            });
+        }
+        
+        // ============================================
+        // AUDIO SYSTEM
+        // ============================================
+        function initAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Ambient drone
+            ambientOscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            ambientOscillator.type = 'sine';
+            ambientOscillator.frequency.setValueAtTime(100, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
+            
+            ambientOscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            ambientOscillator.start();
+            
+            state.audioInitialized = true;
+        }
+        
+        function playSound(frequency, duration, type = 'sine') {
+            if (!state.audioInitialized) return;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.type = type;
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+        
+        // ============================================
+        // VOICE RECOGNITION
+        // ============================================
+        function initVoiceRecognition() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                console.log('Voice recognition not supported');
+                return;
+            }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+            
+            recognition.onstart = () => {
+                state.isVoiceActive = true;
+                document.getElementById('voice-status').textContent = 'Listening...';
+                document.getElementById('voice-status').className = 'text-red-400 animate-pulse';
+                document.getElementById('voice-visualizer').classList.remove('hidden');
+            };
+            
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript.toLowerCase();
+                console.log('Voice command:', transcript);
+                
+                processVoiceCommand(transcript);
+            };
+            
+            recognition.onerror = (event) => {
+                console.log('Voice error:', event.error);
+                state.isVoiceActive = false;
+                document.getElementById('voice-status').textContent = 'Voice Ready';
+                document.getElementById('voice-status').className = 'text-cyan-400';
+                document.getElementById('voice-visualizer').classList.add('hidden');
+            };
+            
+            recognition.onend = () => {
+                state.isVoiceActive = false;
+                document.getElementById('voice-status').textContent = 'Voice Ready';
+                document.getElementById('voice-status').className = 'text-cyan-400';
+                document.getElementById('voice-visualizer').classList.add('hidden');
+            };
+            
+            state.recognition = recognition;
+        }
+        
+        function startVoiceRecognition() {
+            if (state.recognition && !state.isVoiceActive) {
+                try {
+                    state.recognition.start();
+                } catch (e) {
+                    console.log('Voice recognition already started');
+                }
+            }
+        }
+        
+        function processVoiceCommand(command) {
+            console.log('Processing command:', command);
+            
+            // Voice commands
+            if (command.includes('login') || command.includes('sign in')) {
+                openTerminal();
+                speak('Opening login terminal');
+            } else if (command.includes('email') || command.includes('enter email')) {
+                document.getElementById('email').focus();
+                speak('Please enter your email');
+            } else if (command.includes('password') || command.includes('enter password')) {
+                document.getElementById('password').focus();
+                speak('Please enter your password');
+            } else if (command.includes('submit') || command.includes('authenticate') || command.includes('enter')) {
+                document.getElementById('login-form').dispatchEvent(new Event('submit'));
+            } else if (command.includes('close') || command.includes('exit')) {
+                closeTerminal();
+                speak('Closing terminal');
+            } else if (command.includes('hello') || command.includes('hi')) {
+                speak('Hello! How can I assist you today?');
+                showAIDialogue('Hello! How can I assist you today?');
+            } else if (command.includes('help')) {
+                speak('You can say login, enter email, enter password, or submit');
+                showAIDialogue('Commands: Login, Enter Email, Enter Password, Submit, Close');
+            } else {
+                speak('Command not recognized. Say help for available commands.');
+            }
+        }
+        
+        // ============================================
+        // SPEECH SYNTHESIS (AI VOICE)
+        // ============================================
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 0.9;
+                utterance.pitch = 1.1;
+                utterance.volume = 0.8;
+                
+                // Try to use a more robotic voice
+                const voices = speechSynthesis.getVoices();
+                const preferredVoice = voices.find(voice => 
+                    voice.name.includes('Google') || 
+                    voice.name.includes('Robot') ||
+                    voice.lang === 'en-US'
+                );
+                if (preferredVoice) {
+                    utterance.voice = preferredVoice;
+                }
+                
+                speechSynthesis.speak(utterance);
+            }
+        }
+        
+        // ============================================
+        // AI DIALOGUE SYSTEM
+        // ============================================
+        function showAIDialogue(message, duration = 4000) {
+            const dialogueBox = document.getElementById('ai-dialogue');
+            const messageElement = document.getElementById('ai-message');
+            
+            messageElement.textContent = message;
+            dialogueBox.classList.remove('hidden');
+            
+            // Auto-hide after duration
+            setTimeout(() => {
+                dialogueBox.classList.add('hidden');
+            }, duration);
+        }
+        
+        function aiGreeting() {
+            showAIDialogue('Welcome to NEXUS. I am A.I.D.A., your artificial intelligence guide. Please proceed to the login terminal ahead.', 6000);
+            speak('Welcome to NEXUS. I am A.I.D.A., your artificial intelligence guide. Please proceed to the login terminal ahead.');
+        }
+        
+        // ============================================
+        // TERMINAL INTERACTION
+        // ============================================
+        function openTerminal() {
+            state.isTerminalOpen = true;
+            document.getElementById('login-terminal').classList.remove('hidden');
+            document.getElementById('interaction-prompt').classList.add('hidden');
+            controls.unlock();
+            playSound(800, 0.2, 'square');
+        }
+        
+        function closeTerminal() {
+            state.isTerminalOpen = false;
+            document.getElementById('login-terminal').classList.add('hidden');
+            controls.lock();
+        }
+        
+        function checkTerminalProximity() {
+            const playerPos = camera.position;
+            const terminalPos = terminal.position;
+            const distance = playerPos.distanceTo(terminalPos);
+            
+            state.nearTerminal = distance < 4;
+            
+            const prompt = document.getElementById('interaction-prompt');
+            if (state.nearTerminal && !state.isTerminalOpen) {
+                prompt.classList.remove('hidden');
+            } else {
+                prompt.classList.add('hidden');
+            }
+        }
+        
+        // ============================================
+        // LOGIN SYSTEM
+        // ============================================
+        function handleLogin(email, password) {
+            // Simulate authentication
+            setTimeout(() => {
+                state.isLoggedIn = true;
+                
+                // Update UI
+                document.getElementById('user-id').textContent = email.split('@')[0].toUpperCase();
+                document.getElementById('welcome-user').textContent = email.split('@')[0];
+                
+                // Show success cinematic
+                document.getElementById('success-overlay').classList.remove('hidden');
+                playSound(1200, 0.3, 'sine');
+                setTimeout(() => playSound(1600, 0.3, 'sine'), 100);
+                
+                // AI congratulates
+                setTimeout(() => {
+                    showAIDialogue(`Authentication successful. Welcome to the Nexus, ${email.split('@')[0]}.`, 5000);
+                    speak(`Authentication successful. Welcome to the Nexus, ${email.split('@')[0]}.`);
+                }, 1000);
+                
+                // Trigger portal effect
+                triggerPortalEffect();
+                
+                // Hide success overlay after animation
+                setTimeout(() => {
+                    document.getElementById('success-overlay').classList.add('hidden');
+                    document.getElementById('login-terminal').classList.add('hidden');
+                    controls.lock();
+                }, 4000);
+                
+            }, 1500);
+        }
+        
+        function triggerPortalEffect() {
+            // Intensify lights
+            scene.children.forEach(child => {
+                if (child.isLight) {
+                    child.intensity *= 2;
+                }
+            });
+            
+            // Speed up particles
+            state.particlesVelocityMultiplier = 5;
+            
+            // Rotate camera slowly
+            const originalRotation = camera.rotation.y;
+            let rotationProgress = 0;
+            const rotateInterval = setInterval(() => {
+                rotationProgress += 0.02;
+                camera.rotation.y = originalRotation + Math.sin(rotationProgress) * 0.5;
+                
+                if (rotationProgress >= Math.PI * 2) {
+                    clearInterval(rotateInterval);
+                    state.particlesVelocityMultiplier = 1;
+                }
+            }, 16);
+        }
+        
+        // ============================================
+        // NOTIFICATIONS
+        // ============================================
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notifications');
+            const notification = document.createElement('div');
+            notification.className = `notification glass-panel rounded-lg px-4 py-3 ${
+                type === 'success' ? 'border-green-400' : 
+                type === 'error' ? 'border-red-400' : 'border-cyan-400'
+            }`;
+            notification.innerHTML = `
+                <p class="text-sm ${
+                    type === 'success' ? 'text-green-400' : 
+                    type === 'error' ? 'text-red-400' : 'text-cyan-400'
+                }">${message}</p>
+            `;
+            container.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+        
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+        function setupEventListeners() {
+            // Start Button
+            document.getElementById('start-btn').addEventListener('click', () => {
+                document.getElementById('start-overlay').classList.add('hidden');
+                document.getElementById('hud').classList.remove('hidden');
+                state.isPlaying = true;
+                controls.lock();
+                initAudio();
+                initVoiceRecognition();
+                
+                // AI greeting after short delay
+                setTimeout(() => {
+                    aiGreeting();
+                }, 2000);
+            });
+            
+            // Pointer Lock
+            document.addEventListener('pointerlockchange', () => {
+                controls.isLocked = document.pointerLockElement === document.body;
+            });
+            
+            // Mouse Movement
+            document.addEventListener('mousemove', (event) => {
+                if (!controls.isLocked || state.isTerminalOpen) return;
+                
+                const movementX = event.movementX || 0;
+                const movementY = event.movementY || 0;
+                
+                camera.rotation.y -= movementX * 0.002;
+                camera.rotation.x -= movementY * 0.002;
+                
+                // Clamp vertical look
+                camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
+            });
+            
+            // Keyboard Input
+            document.addEventListener('keydown', (event) => {
+                switch (event.code) {
+                    case 'KeyW':
+                    case 'ArrowUp':
+                        moveForward = true;
+                        break;
+                    case 'KeyS':
+                    case 'ArrowDown':
+                        moveBackward = true;
+                        break;
+                    case 'KeyA':
+                    case 'ArrowLeft':
+                        moveLeft = true;
+                        break;
+                    case 'KeyD':
+                    case 'ArrowRight':
+                        moveRight = true;
+                        break;
+                    case 'KeyE':
+                        if (state.nearTerminal && !state.isTerminalOpen) {
+                            openTerminal();
+                        }
+                        break;
+                    case 'Escape':
+                        if (state.isTerminalOpen) {
+                            closeTerminal();
+                        }
+                        break;
+                    case 'Space':
+                        startVoiceRecognition();
+                        break;
+                }
+            });
+            
+            document.addEventListener('keyup', (event) => {
+                switch (event.code) {
+                    case 'KeyW':
+                    case 'ArrowUp':
+                        moveForward = false;
+                        break;
+                    case 'KeyS':
+                    case 'ArrowDown':
+                        moveBackward = false;
+                        break;
+                    case 'KeyA':
+                    case 'ArrowLeft':
+                        moveLeft = false;
+                        break;
+                    case 'KeyD':
+                    case 'ArrowRight':
+                        moveRight = false;
+                        break;
+                }
+            });
+            
+            // Login Form
+            document.getElementById('login-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                
+                if (email && password) {
+                    handleLogin(email, password);
+                } else {
+                    showNotification('Please fill in all fields', 'error');
+                }
+            });
+            
+            // Close Terminal
+            document.getElementById('close-terminal').addEventListener('click', closeTerminal);
+            
+            // Voice Login Button
+            document.getElementById('voice-login-btn').addEventListener('click', () => {
+                startVoiceRecognition();
+            });
+            
+            // Window Resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+            
+            // Click to start voice (when enabled)
+            document.addEventListener('click', () => {
+                if (state.isPlaying && !state.isTerminalOpen && !state.isVoiceActive) {
+                    // Optional: Start voice on click
+                    // startVoiceRecognition();
+                }
+            });
+        }
+        
+        // ============================================
+        // ANIMATION LOOP
+        // ============================================
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const time = Date.now() * 0.001;
+            const delta = (performance.now() - prevTime) / 1000;
+            prevTime = performance.now();
+            
+            if (state.isPlaying && !state.isTerminalOpen) {
+                // Player Movement
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+                
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+                
+                if (moveForward || moveBackward) velocity.z -= direction.z * 100.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 100.0 * delta;
+                
+                // Apply movement relative to camera direction
+                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+                forward.y = 0;
+                forward.normalize();
+                
+                const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+                right.y = 0;
+                right.normalize();
+                
+                camera.position.addScaledVector(forward, -velocity.z * delta);
+                camera.position.addScaledVector(right, velocity.x * delta);
+                
+                // Keep player on ground
+                camera.position.y = 1.7;
+                
+                // Boundary check
+                camera.position.x = Math.max(-45, Math.min(45, camera.position.x));
+                camera.position.z = Math.max(-85, Math.min(25, camera.position.z));
+                
+                // Check terminal proximity
+                checkTerminalProximity();
+            }
+            
+            // Animate AI Assistant
+            if (aiAssistant) {
+                aiAssistant.material.uniforms.time.value = time;
+                aiAssistant.position.y = 2.5 + Math.sin(time * 2) * 0.2;
+                aiAssistant.rotation.y = time * 0.5;
+                
+                if (aiAssistant.ring) {
+                    aiAssistant.ring.rotation.z = -time;
+                }
+                
+                if (aiAssistant.orbitParticles) {
+                    aiAssistant.orbitParticles.forEach((particle, index) => {
+                        particle.angle += particle.speed;
+                        particle.position.x = Math.cos(particle.angle) * particle.radius;
+                        particle.position.z = Math.sin(particle.angle) * particle.radius;
+                        particle.position.y = Math.sin(time * 3 + index) * 0.3;
+                    });
+                }
+            }
+            
+            // Animate Terminal Display
+            if (terminal && terminal.displayMaterial) {
+                terminal.displayMaterial.uniforms.time.value = time;
+            }
+            
+            // Animate Particles
+            if (particles) {
+                const positions = particles.geometry.attributes.position.array;
+                const multiplier = state.particlesVelocityMultiplier || 1;
+                
+                for (let i = 0; i < positions.length; i += 3) {
+                    positions[i + 1] -= 0.02 * multiplier;
+                    
+                    if (positions[i + 1] < 0) {
+                        positions[i + 1] = 50;
+                    }
+                }
+                
+                particles.geometry.attributes.position.needsUpdate = true;
+                particles.rotation.y = time * 0.05;
+            }
+            
+            // Animate Ground Shader
+            if (state.groundMaterial) {
+                state.groundMaterial.uniforms.time.value = time;
+            }
+            
+            // Animate Skybox
+            if (state.skyboxMaterial) {
+                state.skyboxMaterial.uniforms.time.value = time;
+            }
+            
+            // Animate Rings
+            if (state.rings) {
+                state.rings.forEach(ring => {
+                    ring.mesh.rotation.z += ring.speed;
+                });
+            }
+            
+            // Update Multiplayer
+            updateMultiplayer();
+            
+            // Render
+            renderer.render(scene, camera);
+        }
+        
+        // ============================================
+        // INITIALIZE
+        // ============================================
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
