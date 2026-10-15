@@ -1,0 +1,39 @@
+{
+  "name": "aether-catalog",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Netflix-inspired browsing experience for the Aether backend (backend.aether.cx)",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "vite build --config web/vite.config.mjs",
+    "start": "node server/index.mjs",
+    "dev": "npm run build && node server/index.mjs",
+    "dev:server": "node --watch server/index.mjs",
+    "dev:web": "vite --config web/vite.config.mjs",
+    "mock": "node tools/mock-backend.mjs",
+    "build:domtest": "vite build --config web/vite.domtest.config.mjs",
+    "smoke": "node tools/smoke-test.mjs",
+    "uitest": "npm run build:domtest && node tools/dom-test.mjs",
+    "test": "npm run build && node tools/smoke-test.mjs && npm run uitest"
+  },
+  "dependencies": {
+    "@scure/bip39": "^1.4.0",
+    "compression": "^1.7.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "jsdom": "^30.1.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.11"
+  }
+}
