@@ -1,0 +1,17 @@
+# One-click blueprint for Render (https://render.com) — free tier works for a demo.
+# New → Blueprint → connect this repo → deploy. Gives you a public URL serving LIVE prices.
+services:
+  - type: web
+    name: arbscope
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: node server/index.js
+    healthCheckPath: /api/healthz
+    envVars:
+      - key: DATA_MODE
+        value: auto          # auto = real venues + simulated fallback; use "live" for real-only
+      - key: NODE_ENV
+        value: production
+      - key: ARBSCOPE_MASTER_KEY
+        generateValue: true  # Render generates a strong vault key for you
