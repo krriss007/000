@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="ArbScope — crypto arbitrage analysis and execution desk. Paper trading by default. Arbitrage can lose money: fees, slippage, latency, liquidity, transfer delays and outages all eat the edge. No profit is guaranteed." />
+<title>ArbScope — Arbitrage Analysis & Execution Desk</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚖️</text></svg>" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+<!-- Honesty banner — always visible, never dismissible for long -->
+<div class="honesty-banner" role="note">
+  <strong>Not risk-free.</strong> Prices move in milliseconds, fees &amp; slippage consume edge, one leg can fill without the other, and exchanges go down. ArbScope shows you the math — <strong>no profit is guaranteed, and apparent opportunities can and do lose money.</strong>
+</div>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">AR</div>
+    <div>
+      <div class="brand-name">ArbScope</div>
+      <div class="brand-sub">Arbitrage Analysis &amp; Execution Desk</div>
+    </div>
+  </div>
+
+  <div class="topbar-right">
+    <div class="mode-pill" id="modePill" title="Paper mode never places real orders. Live mode is disabled until you deliberately enable it in Settings.">
+      <span class="dot"></span><span id="modePillText">PAPER</span>
+    </div>
+    <div class="feed-status" id="feedStatus" title="Market data freshness">
+      <span class="pulse"></span><span id="feedStatusText">connecting…</span>
+    </div>
+    <button class="kill-switch" id="killSwitchBtn" title="Engage kill switch: blocks all new orders and cancels open orders immediately">
+      <span class="kill-icon">■</span> KILL SWITCH
+    </button>
+  </div>
+</header>
+
+<main class="layout">
+
+  <!-- KPI row -->
+  <section class="kpis" aria-label="Desk summary">
+    <div class="kpi"><div class="kpi-label">Actionable opportunities</div><div class="kpi-value" id="kpiActionable">–</div><div class="kpi-foot">net positive after all costs</div></div>
+    <div class="kpi"><div class="kpi-label">Venues healthy</div><div class="kpi-value" id="kpiVenues">–</div><div class="kpi-foot">of <span id="kpiVenuesTotal">–</span> reporting</div></div>
+    <div class="kpi"><div class="kpi-label">Realized P&amp;L today (UTC)</div><div class="kpi-value" id="kpiPnl">–</div><div class="kpi-foot" id="kpiPnlNote">paper + live</div></div>
+    <div class="kpi"><div class="kpi-label">Daily loss budget left</div><div class="kpi-value" id="kpiLossBudget">–</div><div class="kpi-foot">halts trading at the cap</div></div>
+    <div class="kpi"><div class="kpi-label">Feed freshness</div><div class="kpi-value" id="kpiStale">–</div><div class="kpi-foot">books older than threshold are not tradable</div></div>
+  </section>
+
+  <!-- Opportunities -->
+  <section class="panel opportunities-panel">
+    <div class="panel-head">
+      <div>
+        <h1>Cross-exchange opportunities <span id="oppCount" class="count-badge">0</span></h1>
+        <p class="panel-sub">Estimated net of taker fees on both legs, slippage (book-walk), funding and amortized transfer cost. Sorted by net return. Click a row for the full breakdown.</p>
+      </div>
+      <div class="opp-controls">
+        <label class="switch"><input type="checkbox" id="showOnlyProfitable" checked /><span></span> Only net-profitable</label>
+        <label class="switch"><input type="checkbox" id="showFreshOnly" checked /><span></span> Fresh data only</label>
+        <button class="btn ghost" id="refreshBtn">↻ Refresh</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="opp-table" id="oppTable" aria-label="Arbitrage opportunities">
+        <thead>
+          <tr>
+            <th>Symbol</th><th>Route (buy → sell)</th><th>Size (base)</th><th>Notional</th>
+            <th>Gross</th><th>Fees (both legs)</th><th>Net P&amp;L</th><th>Net %</th><th>Break-even move</th><th>Freshness</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="oppTableBody"><tr class="empty-row"><td colspan="11">Loading market data…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="table-foot"><span id="oppDisclaimer">Opportunities are estimates. Edge can (and does) vanish mid-execution.</span><span id="oppTimestamp" class="mono"></span></div>
+  </section>
+
+  <div class="two-col">
+    <!-- Balances -->
+    <section class="panel">
+      <div class="panel-head"><div><h2>Balances</h2><p class="panel-sub">Paper ledger is simulated. Live balances are read-only — this app never moves funds between exchanges.</p></div></div>
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-balance-tab="paper" role="tab">Paper</button>
+        <button class="tab" data-balance-tab="live" role="tab">Live (read-only)</button>
+        <button class="btn ghost small" id="resetPaperBtn" title="Reset the simulated paper bankroll and inventory">Reset paper account</button>
+      </div>
+      <div id="balancesPaper" class="balances-grid"></div>
+      <div id="balancesLive" class="balances-grid hidden"></div>
+    </section>
+
+    <!-- Orders -->
+    <section class="panel">
+      <div class="panel-head"><div><h2>Orders &amp; fills</h2><p class="panel-sub">Reconciled against the exchange where possible. Partial fills and rejections are surfaced, never hidden.</p></div></div>
+      <div class="table-wrap orders-wrap">
+        <table class="opp-table compact">
+          <thead><tr><th>Time</th><th>Venue</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Filled</th><th>Avg px</th><th>Fee</th><th>Status</th><th></th></tr></thead>
+          <tbody id="ordersTableBody"><tr class="empty-row"><td colspan="10">No orders yet — paper trades appear here.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div class="two-col">
+    <!-- Venue health -->
+    <section class="panel">
+      <div class="panel-head"><div><h2>Venue health &amp; feeds</h2><p class="panel-sub">Every quote is source-labeled. Failing venues are flagged and excluded from tradable opportunities — never silently simulated when live mode is requested.</p></div></div>
+      <div id="venueHealth" class="venue-grid"></div>
+    </section>
+
+    <!-- Audit log -->
+    <section class="panel">
+      <div class="panel-head"><div><h2>Audit log</h2><p class="panel-sub">Connections, config changes, previews, confirmations, orders, cancellations, kill-switch events. Secrets are redacted.</p></div><button class="btn ghost small" id="refreshAuditBtn">↻</button></div>
+      <div id="auditLog" class="audit-log mono"></div>
+    </section>
+  </div>
+
+  <!-- Settings -->
+  <section class="panel" id="settingsPanel">
+    <div class="panel-head"><div><h2>Configuration</h2><p class="panel-sub">Trading mode, limits, venues, credentials, watchlist and costs. Changes are audited.</p></div></div>
+    <div class="settings-grid">
+
+      <fieldset class="settings-card danger-card">
+        <legend>Trading mode</legend>
+        <p class="card-note">Paper trading is the default and never touches real funds. Live mode places <strong>real orders with real money</strong> and is only possible after explicit acknowledgement.</p>
+        <div class="mode-toggle">
+          <button class="mode-btn active" id="paperModeBtn" type="button">PAPER (default)</button>
+          <button class="mode-btn live" id="liveModeBtn" type="button">Enable LIVE trading…</button>
+        </div>
+        <p class="card-note small" id="liveModeNote">Live trading is OFF. No real orders can be placed.</p>
+      </fieldset>
+
+      <fieldset class="settings-card">
+        <legend>Risk limits</legend>
+        <div class="form-grid">
+          <label>Max per-trade notional (USD)<input type="number" min="10" step="50" id="setMaxNotional" /></label>
+          <label>Daily realized loss limit (USD)<input type="number" min="1" step="10" id="setMaxDailyLoss" /></label>
+          <label>Max open positions<input type="number" min="1" step="1" id="setMaxOpenPositions" /></label>
+          <label>Max slippage guard (%)<input type="number" min="0.01" step="0.05" id="setMaxSlippage" /></label>
+          <label>Min net return to flag actionable (bps)<input type="number" min="0" step="5" id="setMinBps" /></label>
+          <label>Funding/carry assumption (bps)<input type="number" min="0" step="1" id="setFundingBps" /></label>
+          <label>Amortized transfer cost (USD/round-trip)<input type="number" min="0" step="0.5" id="setTransferCost" /></label>
+          <label>Alert threshold (net %)<input type="number" min="0.01" step="0.05" id="setAlertThreshold" /></label>
+        </div>
+        <button class="btn primary" id="saveRiskBtn">Save risk limits</button>
+      </fieldset>
+
+      <fieldset class="settings-card">
+        <legend>Exchanges &amp; fee overrides</legend>
+        <p class="card-note">Standard retail taker fees are pre-filled. Override with your actual tier. Transfer delays and withdrawal fees are always shown in estimates.</p>
+        <div id="venueToggles" class="venue-toggles"></div>
+      </fieldset>
+
+      <fieldset class="settings-card">
+        <legend>API credentials <span class="tag warn">trading-only — never withdrawal</span></legend>
+        <p class="card-note">Stored AES-256-GCM encrypted, server-side only. Never sent to the browser, never logged. Create keys with <strong>spot trading + read permissions only</strong>; this app contains no withdrawal code path.</p>
+        <form id="credentialForm" autocomplete="off">
+          <div class="form-grid">
+            <label>Venue
+              <select id="credVenue"><option value="binance">Binance</option><option value="kraken">Kraken</option></select>
+            </label>
+            <label>Label<input type="text" id="credLabel" placeholder="e.g. main spot account" maxlength="64" /></label>
+            <label>API key<input type="password" id="credKey" placeholder="paste trading-only key" autocomplete="off" /></label>
+            <label>API secret<input type="password" id="credSecret" placeholder="paste secret" autocomplete="off" /></label>
+          </div>
+          <div class="row-gap">
+            <label class="switch"><input type="checkbox" id="credVerify" checked /><span></span> Verify by calling the exchange before saving</label>
+            <button class="btn primary" type="submit">Store encrypted credentials</button>
+          </div>
+        </form>
+        <div id="credentialList" class="credential-list"></div>
+      </fieldset>
+
+      <fieldset class="settings-card">
+        <legend>Watchlist &amp; quote equivalence</legend>
+        <label>Watchlist assets (comma separated)<input type="text" id="setWatchlist" placeholder="BTC, ETH, SOL" /></label>
+        <div class="form-grid">
+          <label>USD = <input type="number" min="0.5" step="0.01" id="quoteUSD" /></label>
+          <label>USDT = <input type="number" min="0.5" step="0.01" id="quoteUSDT" /></label>
+          <label>USDC = <input type="number" min="0.5" step="0.01" id="quoteUSDC" /></label>
+        </div>
+        <button class="btn primary" id="saveWatchlistBtn">Save watchlist &amp; quotes</button>
+      </fieldset>
+
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <p><strong>ArbScope does not guarantee profits.</strong> Spot arbitrage here assumes pre-funded accounts on both venues; rebalancing incurs withdrawal fees and transfer delays (shown in every estimate). Simulated venues are labeled SIMULATED everywhere. Live trading uses real funds at your own risk. This is not financial advice. By trading you accept full responsibility for your orders and their outcomes.</p>
+</footer>
+
+<!-- Opportunity detail modal -->
+<div class="modal-backdrop hidden" id="detailModal" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+  <div class="modal wide">
+    <div class="modal-head">
+      <div><h2 id="detailTitle">Opportunity</h2><div class="mono muted" id="detailRoute"></div></div>
+      <button class="icon-btn" data-close-modal="detailModal" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-grid">
+        <div class="detail-left">
+          <div class="stat-strip" id="detailStats"></div>
+          <h3>Cost &amp; risk breakdown</h3>
+          <table class="kv-table" id="detailBreakdown"></table>
+          <h3>Assumptions <span class="tag">read these</span></h3>
+          <ul id="detailAssumptions" class="assumption-list"></ul>
+          <h3>Warnings</h3>
+          <ul id="detailWarnings" class="warning-list"></ul>
+        </div>
+        <div class="detail-right">
+          <h3>Price history (this session)</h3>
+          <canvas id="priceChart" width="420" height="180" aria-label="Price history chart"></canvas>
+          <h3>Order book depth (buy venue ask / sell venue bid)</h3>
+          <canvas id="depthChart" width="420" height="180" aria-label="Order book depth chart"></canvas>
+          <div class="book-meta mono" id="bookMeta"></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <div class="muted small">Preview re-fetches live books at confirm time; if the edge is gone, execution is blocked. No order is placed from this view.</div>
+        <button class="btn primary big" id="detailPreviewBtn">Review trade &amp; preview →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Preview / confirm modal -->
+<div class="modal-backdrop hidden" id="previewModal" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+  <div class="modal">
+    <div class="modal-head">
+      <div><h2 id="previewTitle">Trade preview — review before confirming</h2><div class="mono muted" id="previewMeta"></div></div>
+      <button class="icon-btn" data-close-modal="previewModal" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="previewBody"></div>
+      <h3>Pre-trade risk checks</h3>
+      <ul id="previewChecks" class="check-list"></ul>
+      <label class="ack-row"><input type="checkbox" id="previewAck" /><span>I understand: this is not guaranteed profit. One leg can fill without the other, and I accept full responsibility for this order.</span></label>
+      <div id="previewResult" class="preview-result hidden"></div>
+      <div class="modal-foot">
+        <button class="btn ghost big" data-close-modal="previewModal">Abort</button>
+        <button class="btn danger big" id="confirmOrderBtn" disabled>Confirm &amp; execute</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Kill switch modal -->
+<div class="modal-backdrop hidden" id="killModal" role="dialog" aria-modal="true" aria-labelledby="killTitle">
+  <div class="modal">
+    <div class="modal-head"><div><h2 id="killTitle">Engage kill switch</h2></div><button class="icon-btn" data-close-modal="killModal" aria-label="Close">✕</button></div>
+    <div class="modal-body">
+      <p>This will <strong>immediately block all new orders</strong> and attempt to cancel every open order on connected venues (paper and live). It does not move funds or close positions.</p>
+      <label>Reason (audited)<input type="text" id="killReason" placeholder="e.g. venue incident, fat-finger risk, news event" maxlength="200" /></label>
+      <div id="killResult" class="preview-result hidden"></div>
+      <div class="modal-foot">
+        <button class="btn ghost big" data-close-modal="killModal">Keep trading</button>
+        <button class="btn danger big" id="confirmKillBtn">ENGAGE KILL SWITCH</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Live trading acknowledgement modal -->
+<div class="modal-backdrop hidden" id="liveAckModal" role="dialog" aria-modal="true" aria-labelledby="liveAckTitle">
+  <div class="modal">
+    <div class="modal-head"><div><h2 id="liveAckTitle">Enable LIVE trading — real money</h2></div><button class="icon-btn" data-close-modal="liveAckModal" aria-label="Close">✕</button></div>
+    <div class="modal-body">
+      <div class="danger-box">
+        <p><strong>You are about to enable real-order placement.</strong></p>
+        <ul>
+          <li>Orders will be placed with real funds on connected exchanges.</li>
+          <li>Slippage, latency, partial fills and outages can cause real losses instantly.</li>
+          <li>API keys grant trading rights. This app never requests or uses withdrawal permission — but key hygiene is your responsibility.</li>
+          <li>ArbScope is software, not a fiduciary. No profit is promised or implied.</li>
+        </ul>
+      </div>
+      <label>Type <code>ENABLE LIVE TRADING</code> to proceed<input type="text" id="liveAckInput" autocomplete="off" placeholder="ENABLE LIVE TRADING" /></label>
+      <div class="modal-foot">
+        <button class="btn ghost big" data-close-modal="liveAckModal">Stay in paper mode</button>
+        <button class="btn danger big" id="confirmLiveAckBtn" disabled>Enable live trading</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>

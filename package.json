@@ -1,0 +1,16 @@
+{
+  "name": "arbscope",
+  "version": "1.0.0",
+  "description": "ArbScope — crypto arbitrage analysis & execution desk. Paper-trading by default; live trading via official exchange APIs. Not financial advice. No profit is guaranteed.",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "NODE_ENV=development DATA_MODE=simulated node --watch server/index.js",
+    "test": "node --test test/"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "engines": { "node": ">=20" }
+}
