@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "NODE_ENV=development DATA_MODE=simulated node --watch server/index.js",
-    "test": "node --test test/"
+    "test": "node --test"
   },
   "license": "MIT",
   "dependencies": {
