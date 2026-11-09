@@ -109,6 +109,25 @@ Key invariants:
 - **Every mutation is audited**: connections, config changes, previews, confirmations/rejections, fills, cancellations, kill-switch events.
 - **No withdrawal code path exists in this repository.** API keys must not carry withdrawal permission.
 
+## Running with real market data (deployment)
+
+This app needs outbound HTTPS access to exchange APIs for live prices:
+`api.binance.com`, `api.kraken.com`, `api.exchange.coinbase.com`. Restricted
+sandboxes/firewalls will block these (they return connection errors and the
+affected venues will show as DOWN — the app will never silently substitute fake
+data when `DATA_MODE=live`).
+
+```bash
+# any normal VM / container host:
+docker build -t arbscope .
+docker run -e ARBSCOPE_MASTER_KEY=$(openssl rand -hex 32) -p 8787:8787 arbscope
+# or without Docker:
+npm ci --omit=dev && DATA_MODE=live npm start
+```
+
+Live public market data requires **no API keys**. Keys are only needed for live
+order placement (Configuration → API credentials, trading-only, never withdrawal).
+
 ## Supported exchanges
 
 | Venue | Market data | Live execution | Notes |
